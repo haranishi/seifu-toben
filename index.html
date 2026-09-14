@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>政府はこう答えてきた — 国会答弁アーカイブ</title>
+<meta name="description" content="国会会議録から政府側の答弁だけを抜き出し、テーマごとに「いつ・どの省庁が・何と答えてきたか」を時系列で表示します。出典は国会会議録検索システムの原文へリンクします。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230072B2'/%3E%3Crect x='7' y='18' width='4' height='8' fill='white'/%3E%3Crect x='14' y='10' width='4' height='16' fill='white'/%3E%3Crect x='21' y='14' width='4' height='12' fill='%23D55E00'/%3E%3C/svg%3E">
+<link rel="canonical" href="https://example.invalid/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="政府はこう答えてきた — 国会答弁アーカイブ">
+<meta property="og:description" content="テーマを入れると、政府がその問題にいつから何と答えてきたかが年表で分かります。">
+<meta property="og:url" content="https://example.invalid/">
+<meta property="og:image" content="https://example.invalid/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#ffffff; --surface:#f6f7f9; --border:#d6dae0; --text:#14181d; --muted:#5c6672;
+  --accent:#0072B2; --accent-2:#D55E00; --focus:#0072B2;
+  --radius:10px; --maxw:920px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161b; --surface:#1b2027; --border:#2f3742; --text:#e8ecf1; --muted:#9aa5b1;
+    --accent:#4da3d9; --accent-2:#f08a3c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161b; --surface:#1b2027; --border:#2f3742; --text:#e8ecf1; --muted:#9aa5b1;
+  --accent:#4da3d9; --accent-2:#f08a3c;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  line-height:1.75; font-size:16px;
+}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:24px 16px 72px}
+header h1{font-size:1.5rem; line-height:1.4; margin:0 0 6px}
+header p.lead{margin:0 0 4px; color:var(--muted); font-size:.95rem}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+
+form{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin:20px 0}
+.row{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end}
+.field{display:flex; flex-direction:column; gap:6px; flex:1 1 220px; min-width:0}
+label{font-size:.85rem; color:var(--muted); font-weight:700}
+input,select{
+  font:inherit; padding:10px 12px; border:1px solid var(--border);
+  border-radius:8px; background:var(--bg); color:var(--text); width:100%;
+}
+button{
+  font:inherit; font-weight:700; padding:10px 18px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--accent); background:var(--accent); color:#fff;
+}
+button.secondary{background:transparent; color:var(--accent)}
+button:disabled{opacity:.55; cursor:not-allowed}
+.hint{font-size:.82rem; color:var(--muted); margin:10px 0 0}
+
+.status{margin:24px 0; padding:18px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface)}
+.status h2{margin:0 0 8px; font-size:1.05rem}
+.status p{margin:0; color:var(--muted); font-size:.92rem}
+.status[data-kind="error"]{border-color:var(--accent-2)}
+.status[data-kind="error"] h2{color:var(--accent-2)}
+
+section{margin:32px 0}
+section h2{font-size:1.15rem; margin:0 0 4px}
+section p.sub{margin:0 0 14px; color:var(--muted); font-size:.86rem}
+
+.chart{overflow-x:auto; padding-bottom:4px}
+.bars{display:flex; gap:4px; align-items:flex-end; min-height:170px; min-width:min-content}
+.bar{display:flex; flex-direction:column; align-items:center; gap:6px; flex:0 0 auto; width:44px;
+     background:none; border:none; padding:0; color:inherit; cursor:pointer; font:inherit}
+.bar .col{width:100%; background:var(--accent); border-radius:3px 3px 0 0; min-height:2px; transition:background .12s}
+.bar[aria-pressed="true"] .col{background:var(--accent-2)}
+.bar:hover .col{background:var(--accent-2)}
+.bar .n{font-size:.78rem; font-weight:700}
+.bar .y{font-size:.72rem; color:var(--muted); writing-mode:vertical-rl; letter-spacing:.02em}
+
+.ministries{display:flex; flex-direction:column; gap:8px}
+.ministry{display:grid; grid-template-columns:9.5rem 1fr auto; gap:10px; align-items:center; font-size:.9rem}
+.ministry .name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ministry .track{display:block; background:var(--border); border-radius:4px; height:12px; overflow:hidden}
+/* span のままだと inline 扱いで width/height が効かず、全省庁が同じ長さに見えてしまう */
+.ministry .fill{display:block; background:var(--accent); height:100%; min-width:2px}
+.ministry .n{font-variant-numeric:tabular-nums; color:var(--muted)}
+
+.toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px}
+.chip{font-size:.82rem; padding:5px 12px; border-radius:999px; border:1px solid var(--border); background:var(--surface); cursor:pointer; color:inherit; font-family:inherit}
+.chip[aria-pressed="true"]{background:var(--accent); color:#fff; border-color:var(--accent)}
+
+.card{border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:12px; background:var(--surface)}
+.card .meta{font-size:.8rem; color:var(--muted); margin-bottom:6px}
+.card .who{font-weight:700; font-size:.92rem; margin-bottom:8px}
+.card .body{font-size:.93rem; margin:0 0 12px}
+.card .acts{display:flex; gap:10px; flex-wrap:wrap}
+.card .acts button, .card .acts a{font-size:.82rem; padding:6px 12px; text-decoration:none; display:inline-block}
+.card .acts a{border:1px solid var(--accent); border-radius:8px; color:var(--accent); font-weight:700}
+
+.share{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+.share a, .share button{font-size:.85rem; padding:8px 14px; text-decoration:none; border-radius:8px;
+  border:1px solid var(--accent); color:var(--accent); background:transparent; font-weight:700; display:inline-block}
+footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border); font-size:.82rem; color:var(--muted)}
+footer p{margin:0 0 8px}
+.visually-hidden{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>政府はこう答えてきた</h1>
+  <p class="lead">テーマを入れると、<strong>政府側の答弁だけ</strong>を国会会議録から抜き出し、いつ・どの省庁が答えてきたかを年表にします。</p>
+  <p class="lead">質問した議員の発言と、民間の参考人の発言は除いてあります。</p>
+</header>
+
+<form id="form">
+  <div class="row">
+    <div class="field">
+      <label for="q">テーマの言葉</label>
+      <input id="q" name="q" type="search" placeholder="例：特定外来生物" required autocomplete="off">
+    </div>
+    <div class="field" style="flex:0 0 130px">
+      <label for="from">開始年</label>
+      <input id="from" name="from" type="number" min="1947" max="2026" value="2010" inputmode="numeric">
+    </div>
+    <div class="field" style="flex:0 0 130px">
+      <label for="to">終了年</label>
+      <input id="to" name="to" type="number" min="1947" max="2026" value="2026" inputmode="numeric">
+    </div>
+    <div class="field" style="flex:0 0 auto">
+      <button type="submit" id="go">調べる</button>
+    </div>
+  </div>
+  <p class="hint">会議録は速記録のため、公開は実際の審議から3〜4週間遅れます。直近の答弁はまだ入っていません。</p>
+</form>
+
+<div class="status" id="status" role="status" aria-live="polite">
+  <h2>テーマを入れて「調べる」を押してください</h2>
+  <p>「特定外来生物」「奨学金」「インボイス」のように、政策で使われる言葉が向いています。</p>
+</div>
+
+<main id="results" hidden>
+  <section id="sec-year">
+    <h2>政府が答弁した回数の推移</h2>
+    <p class="sub">棒を選ぶと、その年の答弁だけを下に表示します。もう一度押すと解除します。</p>
+    <div class="chart"><div class="bars" id="bars"></div></div>
+  </section>
+
+  <section id="sec-ministry">
+    <h2>どの省庁が答えてきたか</h2>
+    <p class="sub">答弁者の役職から所管を判定しています。</p>
+    <div class="ministries" id="ministries"></div>
+  </section>
+
+  <section id="sec-list">
+    <h2>答弁を読む</h2>
+    <p class="sub" id="list-sub"></p>
+    <div class="toolbar">
+      <button type="button" class="chip" id="sort-old" aria-pressed="true">古い順</button>
+      <button type="button" class="chip" id="sort-new" aria-pressed="false">新しい順</button>
+      <span class="hint" id="filter-note"></span>
+    </div>
+    <div id="cards"></div>
+  </section>
+
+  <section id="sec-share">
+    <h2>この結果を共有する</h2>
+    <p class="sub">Instagram と YouTube は、Webから投稿画面を開く公式の仕組みがありません。共有シートかリンクのコピーをお使いください。</p>
+    <div class="share">
+      <a id="sh-x" href="#" target="_blank" rel="noopener">X に投稿</a>
+      <a id="sh-line" href="#" target="_blank" rel="noopener">LINE で送る</a>
+      <button type="button" id="sh-native" hidden>共有…</button>
+      <button type="button" id="sh-copy">リンクをコピー</button>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>出典：<a href="https://kokkai.ndl.go.jp/" target="_blank" rel="noopener">国会会議録検索システム</a>（国立国会図書館）。発言の著作権は発言者に帰属します。本サイトは抜粋のみを表示し、全文は原文リンク先でお読みください。</p>
+  <p>答弁の回数は関心の強さを示す目安であって、政策の重要度を示すものではありません。所管の判定は役職名にもとづく機械的なもので、誤りを含むことがあります。</p>
+</footer>
+
+</div>
+
+<script type="module">
+import {
+  isGovernmentSpeech, aggregateByYear, aggregateByMinistry,
+  ministryOf, excerpt, buildCitation,
+} from './lib/gov.js';
+
+const API = 'https://kokkai.ndl.go.jp/api/speech';
+const PAGE = 100;
+const MAX_RECORDS = 2000;      // NDLへの負荷を抑えるための取得上限
+const GAP_MS = 120;            // 連続リクエストの間隔
+
+const $ = (id) => document.getElementById(id);
+const form = $('form'), statusBox = $('status'), results = $('results');
+let state = { records: [], year: null, order: 'old', query: '' };
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function setStatus(kind, title, detail) {
+  statusBox.hidden = false;
+  statusBox.dataset.kind = kind;
+  statusBox.innerHTML = '';
+  const h = document.createElement('h2'); h.textContent = title;
+  const p = document.createElement('p'); p.textContent = detail || '';
+  statusBox.append(h, p);
+}
+
+async function fetchPage(params) {
+  const url = `${API}?${new URLSearchParams({ ...params, recordPacking: 'json' })}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`国会会議録APIが応答しませんでした（HTTP ${res.status}）`);
+  return res.json();
+}
+
+async function search(q, fromYear, toYear) {
+  const base = { any: q, from: `${fromYear}-01-01`, until: `${toYear}-12-31` };
+  const head = await fetchPage({ ...base, maximumRecords: 1 });
+  const total = Number(head.numberOfRecords) || 0;
+  if (total === 0) return { total, records: [] };
+  if (total > MAX_RECORDS) return { total, records: null };
+
+  const records = [];
+  for (let start = 1; start <= total; start += PAGE) {
+    setStatus('loading', '読み込んでいます…',
+      `${Math.min(start - 1 + PAGE, total)} / ${total} 件を取得中`);
+    const page = await fetchPage({ ...base, startRecord: start, maximumRecords: PAGE });
+    records.push(...(page.speechRecord || []));
+    if (!page.nextRecordPosition) break;
+    await sleep(GAP_MS);
+  }
+  return { total, records };
+}
+
+function renderYears(rows) {
+  const bars = $('bars'); bars.innerHTML = '';
+  const max = Math.max(...rows.map((r) => r.count), 1);
+  for (const { year, count } of rows) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'bar';
+    b.setAttribute('aria-pressed', String(state.year === year));
+    b.setAttribute('aria-label', `${year}年 ${count}件`);
+    b.innerHTML =
+      `<span class="n">${count}</span>` +
+      `<span class="col" style="height:${Math.round((count / max) * 118) + 2}px"></span>` +
+      `<span class="y">${year}</span>`;
+    b.addEventListener('click', () => {
+      state.year = state.year === year ? null : year;
+      renderYears(rows); renderList();
+    });
+    bars.append(b);
+  }
+}
+
+function renderMinistries(rows) {
+  const box = $('ministries'); box.innerHTML = '';
+  const max = Math.max(...rows.map((r) => r.count), 1);
+  for (const { ministry, count } of rows.slice(0, 12)) {
+    const el = document.createElement('div');
+    el.className = 'ministry';
+    el.innerHTML =
+      `<span class="name" title="${ministry}">${ministry}</span>` +
+      `<span class="track"><span class="fill" style="width:${(count / max) * 100}%"></span></span>` +
+      `<span class="n">${count}</span>`;
+    box.append(el);
+  }
+}
+
+function renderList() {
+  const cards = $('cards'); cards.innerHTML = '';
+  let rows = state.records;
+  if (state.year) rows = rows.filter((r) => r.date.startsWith(String(state.year)));
+  rows = [...rows].sort((a, b) =>
+    state.order === 'old' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+
+  $('filter-note').textContent = state.year ? `${state.year}年で絞り込み中` : '';
+  $('list-sub').textContent = `${rows.length}件を表示しています。全文は各カードの原文リンクからお読みください。`;
+
+  for (const r of rows.slice(0, 200)) {
+    const card = document.createElement('article');
+    card.className = 'card';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `${r.date}　${r.nameOfHouse}${r.nameOfMeeting}　${ministryOf(r.speakerPosition) || ''}`;
+
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = `${r.speaker}（${r.speakerPosition}）`;
+
+    const body = document.createElement('p');
+    body.className = 'body';
+    body.textContent = excerpt(r.speech, 180);
+
+    const acts = document.createElement('div');
+    acts.className = 'acts';
+    const link = document.createElement('a');
+    link.href = r.speechURL; link.target = '_blank'; link.rel = 'noopener';
+    link.textContent = '原文を読む';
+    const copy = document.createElement('button');
+    copy.type = 'button'; copy.className = 'secondary'; copy.textContent = '引用をコピー';
+    copy.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(buildCitation(r, 180));
+      copy.textContent = 'コピーしました';
+      setTimeout(() => { copy.textContent = '引用をコピー'; }, 1600);
+    });
+    acts.append(link, copy);
+
+    card.append(meta, who, body, acts);
+    cards.append(card);
+  }
+  if (rows.length > 200) {
+    const note = document.createElement('p');
+    note.className = 'hint';
+    note.textContent = `件数が多いため先頭200件のみ表示しています（該当は${rows.length}件）。年を選ぶか期間を狭めてください。`;
+    cards.append(note);
+  }
+}
+
+function renderShare() {
+  const years = state.records.map((r) => r.date.slice(0, 4));
+  const span = years.length ? `${Math.min(...years)}年から` : '';
+  const text = `「${state.query}」について、政府は${span}${state.records.length}件の答弁をしています。`;
+  const url = location.href;
+  $('sh-x').href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  $('sh-line').href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
+  const nat = $('sh-native');
+  if (navigator.share) {
+    nat.hidden = false;
+    nat.onclick = () => navigator.share({ title: '政府はこう答えてきた', text, url }).catch(() => {});
+  }
+  $('sh-copy').onclick = async () => {
+    await navigator.clipboard.writeText(url);
+    $('sh-copy').textContent = 'コピーしました';
+    setTimeout(() => { $('sh-copy').textContent = 'リンクをコピー'; }, 1600);
+  };
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const q = $('q').value.trim();
+  const from = Number($('from').value), to = Number($('to').value);
+  if (!q) return;
+  if (!(from >= 1947 && to >= from && to <= 2026)) {
+    setStatus('error', '年の指定を確認してください', '1947年から2026年の範囲で、開始年は終了年以前にしてください。');
+    results.hidden = true;
+    return;
+  }
+
+  $('go').disabled = true;
+  results.hidden = true;
+  setStatus('loading', '読み込んでいます…', '国会会議録を検索しています。');
+
+  try {
+    const { total, records } = await search(q, from, to);
+    if (total === 0) {
+      setStatus('empty', '見つかりませんでした',
+        `「${q}」を含む発言は、指定した期間の会議録にありません。言葉を変えるか期間を広げてください。`);
+      return;
+    }
+    if (records === null) {
+      setStatus('empty', '件数が多すぎます',
+        `「${q}」は${total}件あり、一度に取得できる上限（${MAX_RECORDS}件）を超えています。期間を狭めるか、より具体的な言葉にしてください。`);
+      return;
+    }
+
+    const gov = records.filter(isGovernmentSpeech);
+    if (gov.length === 0) {
+      setStatus('empty', '政府の答弁はありませんでした',
+        `「${q}」は${records.length}件見つかりましたが、すべて議員の質問など政府以外の発言でした。`);
+      return;
+    }
+
+    state = { records: gov, year: null, order: state.order, query: q };
+    statusBox.hidden = true;
+    results.hidden = false;
+    renderYears(aggregateByYear(gov));
+    renderMinistries(aggregateByMinistry(gov));
+    renderList();
+    renderShare();
+  } catch (err) {
+    setStatus('error', '読み込みに失敗しました',
+      `${err.message} 通信環境を確認して、もう一度お試しください。`);
+  } finally {
+    $('go').disabled = false;
+  }
+});
+
+for (const [id, order] of [['sort-old', 'old'], ['sort-new', 'new']]) {
+  $(id).addEventListener('click', () => {
+    state.order = order;
+    $('sort-old').setAttribute('aria-pressed', String(order === 'old'));
+    $('sort-new').setAttribute('aria-pressed', String(order === 'new'));
+    renderList();
+  });
+}
+</script>
+</body>
+</html>
