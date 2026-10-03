@@ -188,17 +188,16 @@ import {
   isGovernmentSpeech, aggregateByYear, aggregateByMinistry,
   ministryOf, excerpt, buildCitation,
 } from './lib/gov.js';
+import { createNdlFetcher } from './lib/ndl.js';
 
 const API = 'https://kokkai.ndl.go.jp/api/speech';
 const PAGE = 100;
 const MAX_RECORDS = 2000;      // NDLへの負荷を抑えるための取得上限
-const GAP_MS = 120;            // 連続リクエストの間隔
+const fetchNdl = createNdlFetcher(); // 件数確認もページ取得も同じ直列キューを使う
 
 const $ = (id) => document.getElementById(id);
 const form = $('form'), statusBox = $('status'), results = $('results');
 let state = { records: [], year: null, order: 'old', query: '' };
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function setStatus(kind, title, detail) {
   statusBox.hidden = false;
@@ -211,9 +210,7 @@ function setStatus(kind, title, detail) {
 
 async function fetchPage(params) {
   const url = `${API}?${new URLSearchParams({ ...params, recordPacking: 'json' })}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`国会会議録APIが応答しませんでした（HTTP ${res.status}）`);
-  return res.json();
+  return fetchNdl(url);
 }
 
 async function search(q, fromYear, toYear) {
@@ -230,7 +227,6 @@ async function search(q, fromYear, toYear) {
     const page = await fetchPage({ ...base, startRecord: start, maximumRecords: PAGE });
     records.push(...(page.speechRecord || []));
     if (!page.nextRecordPosition) break;
-    await sleep(GAP_MS);
   }
   return { total, records };
 }
