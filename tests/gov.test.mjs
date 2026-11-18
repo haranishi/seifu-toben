@@ -138,3 +138,29 @@ test('政府機関の事務総長や省内の大学振興課は除外しない',
   assert.equal(isGovernmentPosition('東京大学教授'), false);
   assert.equal(isGovernmentPosition('文部科学省大学振興課・東京大学教授'), false);
 });
+
+test('省内の部署名に「大学」「銀行」「研究所」を含む役職も、政府として数える', () => {
+  assert.equal(ministryOf('文部省大学局長'), '文部省');
+  assert.equal(ministryOf('文部科学省高等教育局国立大学法人支援課長'), '文部科学省');
+  assert.equal(ministryOf('大蔵省銀行局長'), '大蔵省');
+  assert.equal(ministryOf('金融庁監督局銀行第一課長'), '金融庁');
+  assert.equal(ministryOf('防衛省防衛研究所長'), '防衛省');
+  // 複合肩書は、区切りごとに見る。官庁の部署名は政府、民間の所属が混じるものは除外する
+  assert.equal(isGovernmentPosition('内閣官房内閣参事官・文部科学省高等教育局大学振興課長'), true);
+  assert.equal(isGovernmentPosition('財務省大臣官房参事官・日本銀行理事'), false);
+  assert.equal(isGovernmentPosition('日本銀行理事'), false);
+});
+
+test('再編前の外局・政務次官・官庁名を省いた内閣の役職も、政府として数える', () => {
+  for (const p of ['総務庁長官', '行政管理庁長官', '社会保険庁長官', '食糧庁長官', '原子力規制委員会事務局長', '内閣審議官', '大蔵政務次官', '通商産業総括政務次官']) {
+    assert.equal(isGovernmentPosition(p), true, p);
+  }
+  assert.equal(ministryOf('大蔵政務次官'), '大蔵省');
+});
+
+test('自治体の消防は、国の消防庁と区別して、政府として数えない', () => {
+  for (const p of ['東京消防庁消防総監', '東京消防庁予防部長', '東京消防庁次長']) {
+    assert.equal(isGovernmentPosition(p), false, p);
+  }
+  assert.equal(isGovernmentPosition('総務省消防庁次長'), true);
+});
