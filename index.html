@@ -122,11 +122,11 @@ footer p{margin:0 0 8px}
     </div>
     <div class="field" style="flex:0 0 130px">
       <label for="from">開始年</label>
-      <input id="from" name="from" type="number" min="1947" max="2026" value="2010" inputmode="numeric">
+      <input id="from" name="from" type="number" min="1947" value="2010" inputmode="numeric">
     </div>
     <div class="field" style="flex:0 0 130px">
       <label for="to">終了年</label>
-      <input id="to" name="to" type="number" min="1947" max="2026" value="2026" inputmode="numeric">
+      <input id="to" name="to" type="number" min="1947" inputmode="numeric">
     </div>
     <div class="field" style="flex:0 0 auto">
       <button type="submit" id="go">調べる</button>
@@ -201,6 +201,14 @@ const MAX_RECORDS = 2000;      // NDLへの負荷を抑えるための取得上�
 const fetchNdl = createNdlFetcher(); // 件数確認もページ取得も同じ直列キューを使う
 
 const $ = (id) => document.getElementById(id);
+function initYearInputs() {
+  const year = Number(new Intl.DateTimeFormat('en', { timeZone: 'Asia/Tokyo', year: 'numeric' }).format(new Date()));
+  $('from').max = String(year);
+  $('to').max = String(year);
+  $('to').value = String(year);
+  return year;
+}
+const CURRENT_YEAR = initYearInputs();
 const form = $('form'), statusBox = $('status'), results = $('results');
 let state = { records: [], year: null, order: 'old', query: '', from: null, to: null };
 
@@ -376,8 +384,8 @@ form.addEventListener('submit', async (e) => {
   const q = $('q').value.trim();
   const from = Number($('from').value), to = Number($('to').value);
   if (!q) return;
-  if (!(from >= 1947 && to >= from && to <= 2026)) {
-    setStatus('error', '年の指定を確認してください', '1947年から2026年の範囲で、開始年は終了年以前にしてください。');
+  if (!(from >= 1947 && to >= from && to <= CURRENT_YEAR)) {
+    setStatus('error', '年の指定を確認してください', `1947年から${CURRENT_YEAR}年の範囲で、開始年は終了年以前にしてください。`);
     results.hidden = true;
     return;
   }
