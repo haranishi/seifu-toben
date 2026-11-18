@@ -123,3 +123,11 @@ test('再編前の府省庁の役職も政府として数える', () => {
   assert.equal(ministryOf('大蔵省主計局長'), '大蔵省');
   assert.equal(ministryOf('通商産業大臣'), '通商産業省');
 });
+
+test('政府機関の事務総長や省内の大学振興課は除外しない', () => {
+  assert.equal(ministryOf('公正取引委員会事務総長'), '公正取引委員会');
+  assert.equal(ministryOf('文部科学省高等教育局大学振興課長'), '文部科学省');
+  assert.equal(isGovernmentPosition('参議院事務総長'), false);
+  assert.equal(isGovernmentPosition('東京大学教授'), false);
+  assert.equal(isGovernmentPosition('文部科学省大学振興課・東京大学教授'), false);
+});
