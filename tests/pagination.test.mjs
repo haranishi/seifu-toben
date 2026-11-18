@@ -38,6 +38,10 @@ test('同じ年に600件あっても中央と最後の答弁に到達できる',
   assert.equal(elements['page-next'].disabled, true);
 });
 
+test('ページ送りを隠す hidden 属性が、display:flex の指定で打ち消されない', () => {
+  assert.match(html, /\.toolbar\[hidden\]\s*\{\s*display\s*:\s*none\s*\}/);
+});
+
 test('200件以下と0件ではページ送りを表示しない', () => {
   for (const count of [0, 200]) {
     const { elements, render } = setup(count);

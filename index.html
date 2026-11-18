@@ -86,6 +86,8 @@ section p.sub{margin:0 0 14px; color:var(--muted); font-size:.86rem}
 .ministry .n{font-variant-numeric:tabular-nums; color:var(--muted)}
 
 .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px}
+/* display:flex が hidden 属性の非表示を上書きしないようにする（ページ送りを隠すため） */
+.toolbar[hidden]{display:none}
 .chip{font-size:.82rem; padding:5px 12px; border-radius:999px; border:1px solid var(--border); background:var(--surface); cursor:pointer; color:inherit; font-family:inherit}
 .chip[aria-pressed="true"]{background:var(--accent); color:#fff; border-color:var(--accent)}
 
