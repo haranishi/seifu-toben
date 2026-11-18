@@ -202,7 +202,7 @@ const fetchNdl = createNdlFetcher(); // 件数確認もページ取得も同じ�
 
 const $ = (id) => document.getElementById(id);
 const form = $('form'), statusBox = $('status'), results = $('results');
-let state = { records: [], year: null, order: 'old', query: '' };
+let state = { records: [], year: null, order: 'old', query: '', from: null, to: null };
 
 function setStatus(kind, title, detail) {
   statusBox.hidden = false;
@@ -332,11 +332,28 @@ function renderList() {
   }
 }
 
+function shareUrl() {
+  const url = new URL(location.href);
+  url.searchParams.set('q', state.query);
+  url.searchParams.set('from', String(state.from));
+  url.searchParams.set('to', String(state.to));
+  return url.href;
+}
+
+function restoreSharedSearch() {
+  const params = new URL(location.href).searchParams;
+  if (!params.has('q') || !params.has('from') || !params.has('to')) return;
+  $('q').value = params.get('q');
+  $('from').value = params.get('from');
+  $('to').value = params.get('to');
+  form.requestSubmit();
+}
+
 function renderShare() {
   const years = state.records.map((r) => r.date.slice(0, 4));
   const span = years.length ? `${Math.min(...years)}年から` : '';
   const text = `「${state.query}」について、政府は${span}${state.records.length}件の答弁をしています。`;
-  const url = location.href;
+  const url = shareUrl();
   $('sh-x').href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
   $('sh-line').href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
   const nat = $('sh-native');
@@ -386,7 +403,7 @@ form.addEventListener('submit', async (e) => {
       return;
     }
 
-    state = { records: gov, year: null, order: state.order, query: q };
+    state = { records: gov, year: null, order: state.order, query: q, from, to };
     statusBox.hidden = true;
     results.hidden = false;
     renderYears(aggregateByYear(gov));
@@ -416,6 +433,7 @@ for (const [id, delta] of [['page-prev', -1], ['page-next', 1]]) {
     renderList();
   });
 }
+restoreSharedSearch();
 </script>
 </body>
 </html>
