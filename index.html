@@ -250,7 +250,10 @@ function renderYears(rows) {
       `<span class="y">${year}</span>`;
     b.addEventListener('click', () => {
       state.year = state.year === year ? null : year;
-      renderYears(rows); renderList();
+      for (const bar of bars.children) {
+        bar.setAttribute('aria-pressed', String(bar === b && state.year === year));
+      }
+      renderList();
     });
     bars.append(b);
   }
