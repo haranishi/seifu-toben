@@ -112,3 +112,14 @@ test('日付から年を取り出す', () => {
   assert.equal(yearOf({ date: '2026-07-27' }), 2026);
   assert.equal(yearOf({}), null);
 });
+
+test('自治体・議会・民間の一般的な役職を政府として数えない', () => {
+  for (const p of ['東京都教育庁指導部長', '国立国会図書館調査及び立法考査局長', '日本商工会議所事務局長']) {
+    assert.equal(isGovernmentPosition(p), false, p);
+  }
+});
+
+test('再編前の府省庁の役職も政府として数える', () => {
+  assert.equal(ministryOf('大蔵省主計局長'), '大蔵省');
+  assert.equal(ministryOf('通商産業大臣'), '通商産業省');
+});
