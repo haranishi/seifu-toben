@@ -162,6 +162,11 @@ footer p{margin:0 0 8px}
       <span class="hint" id="filter-note"></span>
     </div>
     <div id="cards"></div>
+    <div class="toolbar" id="pager" hidden>
+      <button type="button" class="secondary" id="page-prev">前の200件</button>
+      <span id="page-status" role="status"></span>
+      <button type="button" class="secondary" id="page-next">次の200件</button>
+    </div>
   </section>
 
   <section id="sec-share">
@@ -265,7 +270,13 @@ function renderMinistries(rows) {
   }
 }
 
+let listPage = 0;
+let listView = {};
 function renderList() {
+  if (listView.records !== state.records || listView.year !== state.year || listView.order !== state.order) {
+    listPage = 0;
+    listView = { records: state.records, year: state.year, order: state.order };
+  }
   const cards = $('cards'); cards.innerHTML = '';
   let rows = state.records;
   if (state.year) rows = rows.filter((r) => r.date.startsWith(String(state.year)));
@@ -273,9 +284,20 @@ function renderList() {
     state.order === 'old' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
 
   $('filter-note').textContent = state.year ? `${state.year}年で絞り込み中` : '';
-  $('list-sub').textContent = `${rows.length}件を表示しています。全文は各カードの原文リンクからお読みください。`;
+  const pageSize = 200;
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  listPage = Math.min(listPage, pages - 1);
+  const start = listPage * pageSize;
+  const end = Math.min(start + pageSize, rows.length);
+  $('list-sub').textContent = rows.length
+    ? `${rows.length}件中${start + 1}〜${end}件を表示しています。全文は各カードの原文リンクからお読みください。`
+    : '該当する答弁はありません。';
+  $('pager').hidden = pages <= 1;
+  $('page-prev').disabled = listPage === 0;
+  $('page-next').disabled = listPage === pages - 1;
+  $('page-status').textContent = `${listPage + 1} / ${pages}ページ`;
 
-  for (const r of rows.slice(0, 200)) {
+  for (const r of rows.slice(start, end)) {
     const card = document.createElement('article');
     card.className = 'card';
 
@@ -307,12 +329,6 @@ function renderList() {
 
     card.append(meta, who, body, acts);
     cards.append(card);
-  }
-  if (rows.length > 200) {
-    const note = document.createElement('p');
-    note.className = 'hint';
-    note.textContent = `件数が多いため先頭200件のみ表示しています（該当は${rows.length}件）。年を選ぶか期間を狭めてください。`;
-    cards.append(note);
   }
 }
 
@@ -390,6 +406,13 @@ for (const [id, order] of [['sort-old', 'old'], ['sort-new', 'new']]) {
     state.order = order;
     $('sort-old').setAttribute('aria-pressed', String(order === 'old'));
     $('sort-new').setAttribute('aria-pressed', String(order === 'new'));
+    renderList();
+  });
+}
+
+for (const [id, delta] of [['page-prev', -1], ['page-next', 1]]) {
+  $(id).addEventListener('click', () => {
+    listPage += delta;
     renderList();
   });
 }
