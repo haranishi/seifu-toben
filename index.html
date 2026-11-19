@@ -86,6 +86,8 @@ section p.sub{margin:0 0 14px; color:var(--muted); font-size:.86rem}
 .ministry .n{font-variant-numeric:tabular-nums; color:var(--muted)}
 
 .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px}
+/* display:flex が hidden 属性の非表示を上書きしないようにする（ページ送りを隠すため） */
+.toolbar[hidden]{display:none}
 .chip{font-size:.82rem; padding:5px 12px; border-radius:999px; border:1px solid var(--border); background:var(--surface); cursor:pointer; color:inherit; font-family:inherit}
 .chip[aria-pressed="true"]{background:var(--accent); color:#fff; border-color:var(--accent)}
 
@@ -122,11 +124,11 @@ footer p{margin:0 0 8px}
     </div>
     <div class="field" style="flex:0 0 130px">
       <label for="from">開始年</label>
-      <input id="from" name="from" type="number" min="1947" max="2026" value="2010" inputmode="numeric">
+      <input id="from" name="from" type="number" min="1947" value="2010" inputmode="numeric">
     </div>
     <div class="field" style="flex:0 0 130px">
       <label for="to">終了年</label>
-      <input id="to" name="to" type="number" min="1947" max="2026" value="2026" inputmode="numeric">
+      <input id="to" name="to" type="number" min="1947" inputmode="numeric">
     </div>
     <div class="field" style="flex:0 0 auto">
       <button type="submit" id="go">調べる</button>
@@ -162,6 +164,11 @@ footer p{margin:0 0 8px}
       <span class="hint" id="filter-note"></span>
     </div>
     <div id="cards"></div>
+    <div class="toolbar" id="pager" hidden>
+      <button type="button" class="secondary" id="page-prev">前の200件</button>
+      <span id="page-status" role="status"></span>
+      <button type="button" class="secondary" id="page-next">次の200件</button>
+    </div>
   </section>
 
   <section id="sec-share">
@@ -196,8 +203,16 @@ const MAX_RECORDS = 2000;      // NDLへの負荷を抑えるための取得上�
 const fetchNdl = createNdlFetcher(); // 件数確認もページ取得も同じ直列キューを使う
 
 const $ = (id) => document.getElementById(id);
+function initYearInputs() {
+  const year = Number(new Intl.DateTimeFormat('en', { timeZone: 'Asia/Tokyo', year: 'numeric' }).format(new Date()));
+  $('from').max = String(year);
+  $('to').max = String(year);
+  $('to').value = String(year);
+  return year;
+}
+const CURRENT_YEAR = initYearInputs();
 const form = $('form'), statusBox = $('status'), results = $('results');
-let state = { records: [], year: null, order: 'old', query: '' };
+let state = { records: [], year: null, order: 'old', query: '', from: null, to: null };
 
 function setStatus(kind, title, detail) {
   statusBox.hidden = false;
@@ -245,7 +260,10 @@ function renderYears(rows) {
       `<span class="y">${year}</span>`;
     b.addEventListener('click', () => {
       state.year = state.year === year ? null : year;
-      renderYears(rows); renderList();
+      for (const bar of bars.children) {
+        bar.setAttribute('aria-pressed', String(bar === b && state.year === year));
+      }
+      renderList();
     });
     bars.append(b);
   }
@@ -265,7 +283,13 @@ function renderMinistries(rows) {
   }
 }
 
+let listPage = 0;
+let listView = {};
 function renderList() {
+  if (listView.records !== state.records || listView.year !== state.year || listView.order !== state.order) {
+    listPage = 0;
+    listView = { records: state.records, year: state.year, order: state.order };
+  }
   const cards = $('cards'); cards.innerHTML = '';
   let rows = state.records;
   if (state.year) rows = rows.filter((r) => r.date.startsWith(String(state.year)));
@@ -273,9 +297,20 @@ function renderList() {
     state.order === 'old' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
 
   $('filter-note').textContent = state.year ? `${state.year}年で絞り込み中` : '';
-  $('list-sub').textContent = `${rows.length}件を表示しています。全文は各カードの原文リンクからお読みください。`;
+  const pageSize = 200;
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  listPage = Math.min(listPage, pages - 1);
+  const start = listPage * pageSize;
+  const end = Math.min(start + pageSize, rows.length);
+  $('list-sub').textContent = rows.length
+    ? `${rows.length}件中${start + 1}〜${end}件を表示しています。全文は各カードの原文リンクからお読みください。`
+    : '該当する答弁はありません。';
+  $('pager').hidden = pages <= 1;
+  $('page-prev').disabled = listPage === 0;
+  $('page-next').disabled = listPage === pages - 1;
+  $('page-status').textContent = `${listPage + 1} / ${pages}ページ`;
 
-  for (const r of rows.slice(0, 200)) {
+  for (const r of rows.slice(start, end)) {
     const card = document.createElement('article');
     card.className = 'card';
 
@@ -308,19 +343,30 @@ function renderList() {
     card.append(meta, who, body, acts);
     cards.append(card);
   }
-  if (rows.length > 200) {
-    const note = document.createElement('p');
-    note.className = 'hint';
-    note.textContent = `件数が多いため先頭200件のみ表示しています（該当は${rows.length}件）。年を選ぶか期間を狭めてください。`;
-    cards.append(note);
-  }
+}
+
+function shareUrl() {
+  const url = new URL(location.href);
+  url.searchParams.set('q', state.query);
+  url.searchParams.set('from', String(state.from));
+  url.searchParams.set('to', String(state.to));
+  return url.href;
+}
+
+function restoreSharedSearch() {
+  const params = new URL(location.href).searchParams;
+  if (!params.has('q') || !params.has('from') || !params.has('to')) return;
+  $('q').value = params.get('q');
+  $('from').value = params.get('from');
+  $('to').value = params.get('to');
+  form.requestSubmit();
 }
 
 function renderShare() {
   const years = state.records.map((r) => r.date.slice(0, 4));
   const span = years.length ? `${Math.min(...years)}年から` : '';
   const text = `「${state.query}」について、政府は${span}${state.records.length}件の答弁をしています。`;
-  const url = location.href;
+  const url = shareUrl();
   $('sh-x').href = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
   $('sh-line').href = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(url)}`;
   const nat = $('sh-native');
@@ -340,8 +386,8 @@ form.addEventListener('submit', async (e) => {
   const q = $('q').value.trim();
   const from = Number($('from').value), to = Number($('to').value);
   if (!q) return;
-  if (!(from >= 1947 && to >= from && to <= 2026)) {
-    setStatus('error', '年の指定を確認してください', '1947年から2026年の範囲で、開始年は終了年以前にしてください。');
+  if (!(from >= 1947 && to >= from && to <= CURRENT_YEAR)) {
+    setStatus('error', '年の指定を確認してください', `1947年から${CURRENT_YEAR}年の範囲で、開始年は終了年以前にしてください。`);
     results.hidden = true;
     return;
   }
@@ -370,7 +416,7 @@ form.addEventListener('submit', async (e) => {
       return;
     }
 
-    state = { records: gov, year: null, order: state.order, query: q };
+    state = { records: gov, year: null, order: state.order, query: q, from, to };
     statusBox.hidden = true;
     results.hidden = false;
     renderYears(aggregateByYear(gov));
@@ -393,6 +439,14 @@ for (const [id, order] of [['sort-old', 'old'], ['sort-new', 'new']]) {
     renderList();
   });
 }
+
+for (const [id, delta] of [['page-prev', -1], ['page-next', 1]]) {
+  $(id).addEventListener('click', () => {
+    listPage += delta;
+    renderList();
+  });
+}
+restoreSharedSearch();
 </script>
 </body>
 </html>
